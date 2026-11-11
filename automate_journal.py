@@ -8,14 +8,18 @@ import shutil
 import subprocess
 
 from pathlib import Path
+import sys
 from pypdf import PdfWriter
 
 JOURNAL_DOCS_PATH = ''
 PUBLISHED_JOURNALS_PATH = ''
 
+
+Path('logs').mkdir(exist_ok=True)
+
 logging.basicConfig(
     filename=f'./logs/{datetime.datetime.now().strftime('%d_%m_%y_%H_%M_%S')}.txt',
-    level=logging.INFO,
+    level=logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
@@ -25,6 +29,7 @@ def merge_pdf_files(input_dir: str, output_dir: str) -> str | None:
 
     try:
         for filename in Path(input_dir).glob('*.pdf'):
+            logging.debug(filename)
             merger.append(filename)
 
         merger.write(Path(output_dir) / doc_name)
@@ -58,8 +63,20 @@ def convert_word_files(dir: str, output_dir: str) -> bool:
 
 
 def lo_docx_to_pdf(file_path: str, output_dir: str) -> bool:
+    libre_office = ''
+
+    if sys.platform == 'linux':
+        libre_office = '/usr/bin/libreoffice'
+    elif sys.platform == 'darwin':
+        libre_office = '/Applications/LibreOffice.app/Contents/MacOS/soffice'   
+    elif sys.platform == 'win32':
+        libre_office = 'C:\\Program Files\\LibreOffice\\program\\soffice.exe'
+    else:
+        logging.critical('Unsupported operating system.')
+        return False
+
     command = [
-        '/Applications/LibreOffice.app/Contents/MacOS/soffice',
+        libre_office,
         '--headless',
         '--convert-to', 'pdf',
         '--outdir', output_dir,
@@ -67,9 +84,10 @@ def lo_docx_to_pdf(file_path: str, output_dir: str) -> bool:
     ]
 
     logging.debug(file_path)
+    logging.debug(output_dir)
 
     try:
-        subprocess.run(command, check=True, timeout=30)
+        subprocess.run(command, check=True, shell=True, timeout=30)
         return True
     except subprocess.TimeoutExpired:
         logging.critical('Conversion timed out. Terminating LibreOffice process.')
@@ -77,10 +95,13 @@ def lo_docx_to_pdf(file_path: str, output_dir: str) -> bool:
     except subprocess.CalledProcessError:
         logging.critical('Libre Office encountered an internal rendering error.')
         return False
+    except Exception as e:
+        logging.critical(f'An error occurred: {e}')
+        return False
 
 if __name__ == '__main__':
     if convert_word_files(JOURNAL_DOCS_PATH, PUBLISHED_JOURNALS_PATH):
-        if merge_pdf_files(PUBLISHED_JOURNALS_PATH, '/Users/jasonclarke/Documents'):
+        if merge_pdf_files(PUBLISHED_JOURNALS_PATH, ''):
             for filename in Path(JOURNAL_DOCS_PATH).glob('*.*'):
-                os.unlink(filename)
+                #os.unlink(filename)
                 logging.info(f'deleted {filename}')
