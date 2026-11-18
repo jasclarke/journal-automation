@@ -93,7 +93,7 @@ def main() -> None:
     for filename in dir_contents:
         logging.info(f'Processing file: {filename}')
 
-        if filename.is_file() and filename.suffix.lower() in {'.doc', 'docx'}:
+        if filename.is_file() and filename.suffix.lower() in {'.doc', '.docx'}:
             if lo_docx_to_pdf(f'{str(filename)}', JOURNAL_DOCS_PATH):
                 logging.info(f'Converted {filename.stem} to a PDF successfully.')
                 pdf_file = JOURNAL_DOCS_PATH + '/' + str(filename.stem) + '.pdf'
