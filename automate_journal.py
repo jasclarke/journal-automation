@@ -11,8 +11,8 @@ import sys
 from pathlib import Path
 from pypdf import PdfWriter
 
-JOURNAL_DOCS_PATH = '/Users/jasonclarke/Documents/journal-automation/docs'
-PUBLISHED_JOURNALS_PATH = '/Users/jasonclarke/Documents/journal-automation'
+JOURNAL_DOCS_PATH = ''
+PUBLISHED_JOURNALS_PATH = ''
 
 
 Path('logs').mkdir(exist_ok=True)
@@ -93,7 +93,7 @@ def main() -> None:
     for filename in dir_contents:
         logging.info(f'Processing file: {filename}')
 
-        if filename.is_file() and filename.suffix.lower() in {'.doc', 'docx'}:
+        if filename.is_file() and filename.suffix.lower() in {'.doc', '.docx'}:
             if lo_docx_to_pdf(f'{str(filename)}', JOURNAL_DOCS_PATH):
                 logging.info(f'Converted {filename.stem} to a PDF successfully.')
                 pdf_file = JOURNAL_DOCS_PATH + '/' + str(filename.stem) + '.pdf'
@@ -123,7 +123,7 @@ def main() -> None:
         logging.info('Commencing cleanup process')
         
         for filename in Path(JOURNAL_DOCS_PATH).iterdir():
-            #os.unlink(filename)
+            os.unlink(filename)
             logging.info(f'deleted {filename}')
     else:
         raise Exception('Document merge failed. Check logs for details')

@@ -7,9 +7,9 @@ Journal Publication Automation
 This project automates the process of downloading the attachments from specific emails, converting them to PDF format if they are in word format, Combining them into one document, naming the document in a specified format, saving it to a specificed folder, and uploading it into a WordPress downloads module with a scheduled date for publication.
 
 ## Roadmap
-[x] Document processor
-[ ] WordPress Communicator
-[ ] Email Downloader
+-[x] Document processor
+-[ ] WordPress Communicator
+-[ ] Email Downloader
 
 ## Setup
 - **Libre Office must be installed** It is used to convert the word documents to PDFs.
