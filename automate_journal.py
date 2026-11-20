@@ -33,17 +33,6 @@ else:
     logging.critical('.env file was not found.')
     raise Exception('Configuration file is missing. Please see log for details.')
 
-if Path(os.getcwd() + '/.env').is_file():
-    if load_dotenv():
-        logging.debug('.env file has values')
-    else:
-        logging.critical('No environment variables are set.')
-        raise Exception('There was an issue with the configuration file. Please see the log for details.')
-        
-else:
-    logging.critical('.env file was not found.')
-    raise Exception('Configuration file is missing. Please see log for details.')
-
 def get_env(keys: list[str]) -> dict[str, str]:
     missing = [key for key in keys if key not in os.environ]
 
@@ -55,6 +44,25 @@ def get_env(keys: list[str]) -> dict[str, str]:
 
 
 CONFIG = get_env(['HOST', 'WPDM_API_KEY', 'FTP_USERNAME', 'FTP_PASSWORD', 'JOURNAL_DOCS_PATH', 'PUBLISHED_JOURNALS_PATH'])
+
+
+def upload_journal(file_path: str) -> bool:
+    print(file_path)
+    try:
+        with FTP(CONFIG['HOST'], CONFIG['FTP_USERNAME'], CONFIG['FTP_PASSWORD']) as ftp:
+            try:
+                with open(file_path, 'rb') as journal:
+                    ftp.storbinary(f'STOR {Path(file_path).stem}.pdf', journal)
+                    return True
+            except FileNotFoundError:
+                logging.critical(f'{Path(file_path).stem}.pdf was not found.')
+                return False
+            except Exception as e:
+                logging.critical(f'Journal Upload Error: {e}')
+                return False
+    except Exception as e:
+        logging.critical(f'FTP Connection error {e}')
+        return False
 
 
 def merge_pdf_files(input_dir: str, output_dir: str) -> str | None:
@@ -163,4 +171,4 @@ def main() -> None:
 
             
 if __name__ == '__main__':
-    main()
+   main()
