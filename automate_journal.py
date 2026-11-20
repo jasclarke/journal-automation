@@ -33,6 +33,17 @@ else:
     logging.critical('.env file was not found.')
     raise Exception('Configuration file is missing. Please see log for details.')
 
+if Path(os.getcwd() + '/.env').is_file():
+    if load_dotenv():
+        logging.debug('.env file has values')
+    else:
+        logging.critical('No environment variables are set.')
+        raise Exception('There was an issue with the configuration file. Please see the log for details.')
+        
+else:
+    logging.critical('.env file was not found.')
+    raise Exception('Configuration file is missing. Please see log for details.')
+
 def get_env(keys: list[str]) -> dict[str, str]:
     missing = [key for key in keys if key not in os.environ]
 
