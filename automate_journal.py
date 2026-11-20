@@ -8,12 +8,11 @@ import shutil
 import subprocess
 import sys
 
+
+from dotenv import load_dotenv
+from ftplib import FTP
 from pathlib import Path
 from pypdf import PdfWriter
-
-JOURNAL_DOCS_PATH = ''
-PUBLISHED_JOURNALS_PATH = ''
-
 
 Path('logs').mkdir(exist_ok=True)
 
@@ -22,6 +21,25 @@ logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
+
+if Path(os.getcwd() + '/.env').is_file():
+    if load_dotenv():
+        logging.debug('.env file has values')
+    else:
+        logging.critical('No environment variables are set.')
+        raise Exception('There was an issue with the configuration file. Please see the log for details.')
+        
+else:
+    logging.critical('.env file was not found.')
+    raise Exception('Configuration file is missing. Please see log for details.')
+
+
+HOST = os.environ['HOST']
+WPDM_API_KEY = os.environ['WPDM_API_KEY']
+FTP_USERNAME = os.environ['FTP_USERNAME']
+FTP_PASSWORD = os.environ['FTP_PASSWORD']
+JOURNAL_DOCS_PATH = os.environ['JOURNAL_DOCS_PATH']
+PUBLISHED_JOURNALS_PATH = os.environ['PUBLISHED_JOURNAL_PATH']
 
 
 def merge_pdf_files(input_dir: str, output_dir: str) -> str | None:
@@ -123,7 +141,7 @@ def main() -> None:
         logging.info('Commencing cleanup process')
         
         for filename in Path(JOURNAL_DOCS_PATH).iterdir():
-            os.unlink(filename)
+            #os.unlink(filename)
             logging.info(f'deleted {filename}')
     else:
         raise Exception('Document merge failed. Check logs for details')
