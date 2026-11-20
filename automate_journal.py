@@ -8,12 +8,11 @@ import shutil
 import subprocess
 import sys
 
+
+from dotenv import load_dotenv
+from ftplib import FTP
 from pathlib import Path
 from pypdf import PdfWriter
-
-JOURNAL_DOCS_PATH = ''
-PUBLISHED_JOURNALS_PATH = ''
-
 
 Path('logs').mkdir(exist_ok=True)
 
@@ -22,6 +21,29 @@ logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
+
+if Path(os.getcwd() + '/.env').is_file():
+    if load_dotenv():
+        logging.debug('.env file has values')
+    else:
+        logging.critical('No environment variables are set.')
+        raise Exception('There was an issue with the configuration file. Please see the log for details.')
+        
+else:
+    logging.critical('.env file was not found.')
+    raise Exception('Configuration file is missing. Please see log for details.')
+
+def get_env(keys: list[str]) -> dict[str, str]:
+    missing = [key for key in keys if key not in os.environ]
+
+    if len(missing) > 0:
+        logging.critical(f'Missing environment variables: {', '.join(missing)}')
+        raise Exception('Malformed configuration. Please see log for details.')
+    
+    return {key: os.environ[key] for key in keys}
+
+
+CONFIG = get_env(['HOST', 'WPDM_API_KEY', 'FTP_USERNAME', 'FTP_PASSWORD', 'JOURNAL_DOCS_PATH', 'PUBLISHED_JOURNALS_PATH'])
 
 
 def merge_pdf_files(input_dir: str, output_dir: str) -> str | None:
@@ -84,30 +106,30 @@ def lo_docx_to_pdf(file_path: str, output_dir: str) -> bool:
 
 
 def main() -> None:
-    dir_contents = list(Path(JOURNAL_DOCS_PATH).iterdir())
+    dir_contents = list(Path(CONFIG['JOURNAL_DOCS_PATH']).iterdir())
     
     if len(dir_contents) == 0:
-        logging.error(f'No files in the directory: {JOURNAL_DOCS_PATH}')
+        logging.error(f'No files in the directory: {CONFIG['JOURNAL_DOCS_PATH']}')
         raise Exception('No files were found. Check log for details')
         
     for filename in dir_contents:
         logging.info(f'Processing file: {filename}')
 
         if filename.is_file() and filename.suffix.lower() in {'.doc', '.docx'}:
-            if lo_docx_to_pdf(f'{str(filename)}', JOURNAL_DOCS_PATH):
+            if lo_docx_to_pdf(f'{str(filename)}', CONFIG['JOURNAL_DOCS_PATH']):
                 logging.info(f'Converted {filename.stem} to a PDF successfully.')
-                pdf_file = JOURNAL_DOCS_PATH + '/' + str(filename.stem) + '.pdf'
+                pdf_file = CONFIG['JOURNAL_DOCS_PATH'] + '/' + str(filename.stem) + '.pdf'
 
                 if filename.stem[0:7] == 'Journal':
-                    shutil.move(pdf_file, JOURNAL_DOCS_PATH + '/1.pdf')
+                    shutil.move(pdf_file, CONFIG['JOURNAL_DOCS_PATH'] + '/1.pdf')
                 elif filename.stem[0:2] == 'MD':
-                    shutil.move(pdf_file, JOURNAL_DOCS_PATH + '/2.pdf')
+                    shutil.move(pdf_file, CONFIG['JOURNAL_DOCS_PATH'] + '/2.pdf')
                 elif filename.stem[0:7] == 'JOURNAL':
-                    shutil.move(pdf_file, JOURNAL_DOCS_PATH + '/3.pdf')
+                    shutil.move(pdf_file, CONFIG['JOURNAL_DOCS_PATH'] + '/3.pdf')
                 elif filename.stem[0:2] == 'ID':
-                    shutil.move(pdf_file, JOURNAL_DOCS_PATH + '/4.pdf')
+                    shutil.move(pdf_file, CONFIG['JOURNAL_DOCS_PATH'] + '/4.pdf')
                 elif filename.stem[0:3] == 'NPV':
-                    shutil.move(pdf_file, JOURNAL_DOCS_PATH + '/5.pdf')
+                    shutil.move(pdf_file, CONFIG['JOURNAL_DOCS_PATH'] + '/5.pdf')
                 else:
                     logging.error(f'{filename} not accounted for in the renaming process.')
                     raise Exception('Unexpected file. Check log for details.')
@@ -117,13 +139,13 @@ def main() -> None:
         else:
             logging.info(f'This is not a word file: {filename}')
 
-    merged_document = merge_pdf_files(JOURNAL_DOCS_PATH, PUBLISHED_JOURNALS_PATH)
+    merged_document = merge_pdf_files(CONFIG['JOURNAL_DOCS_PATH'], CONFIG['PUBLISHED_JOURNALS_PATH'])
 
     if merged_document:
         logging.info('Commencing cleanup process')
         
-        for filename in Path(JOURNAL_DOCS_PATH).iterdir():
-            os.unlink(filename)
+        for filename in Path(CONFIG['JOURNAL_DOCS_PATH']).iterdir():
+            #os.unlink(filename)
             logging.info(f'deleted {filename}')
     else:
         raise Exception('Document merge failed. Check logs for details')
