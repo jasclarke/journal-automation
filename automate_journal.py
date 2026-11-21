@@ -33,15 +33,15 @@ else:
     logging.critical('.env file was not found.')
     raise Exception('Configuration file is missing. Please see log for details.')
 
-def upload_journal_test(merged_document: str):
+def upload_journal_test(merged_document: str, ftp_dir:str, host: str, username: str, password: str, path: str) -> None:
     command = [
         'python3', 
         '-m', 'pyftpdlib',
         '-w',
         '-p', '21',
-        '-d', '/opt/homebrew/var/www/ipoweb/wp-content/uploads/download-manager-files',
-        '-u', CONFIG['FTP_USERNAME'],
-        '-P', CONFIG['FTP_PASSWORD']
+        '-d', ftp_dir,
+        '-u', username,
+        '-P', password
     ]
 
     ftp_server = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -50,7 +50,7 @@ def upload_journal_test(merged_document: str):
     try:
         time.sleep(1)
 
-        if upload_journal(CONFIG['PUBLISHED_JOURNALS_PATH'], merged_document):
+        if upload_journal(path, merged_document, host, username, password):
             logging.info(f'{merged_document} was uploaded successfully.')
         else:
             logging.critical(f'{merged_document} failed to upload.')
@@ -70,14 +70,14 @@ def get_env(keys: list[str]) -> dict[str, str]:
     return {key: os.environ[key] for key in keys}
 
 
-CONFIG = get_env(['HOST', 'WPDM_API_KEY', 'FTP_USERNAME', 'FTP_PASSWORD', 'JOURNAL_DOCS_PATH', 'PUBLISHED_JOURNALS_PATH', 'ENVIRONMENT'])
+CONFIG = get_env(['HOST', 'WPDM_API_KEY', 'FTP_USERNAME', 'FTP_PASSWORD', 'JOURNAL_DOCS_PATH', 'PUBLISHED_JOURNALS_PATH', 'ENVIRONMENT', 'FTP_DIR'])
 
 
-def upload_journal(path: str, file_name: str) -> bool:
+def upload_journal(path: str, file_name: str, host: str, username: str, password: str) -> bool:
     file_path = path + '/' + file_name
 
     try:
-        with FTP(CONFIG['HOST'], CONFIG['FTP_USERNAME'], CONFIG['FTP_PASSWORD']) as ftp:
+        with FTP(host, username, password) as ftp:
             try:
                 with open(file_path, 'rb') as journal:
                     ftp.storbinary(f'STOR {file_name}', journal)
@@ -198,13 +198,13 @@ def main() -> None:
         raise Exception('Document merge failed. Check logs for details')
 
     if CONFIG['ENVIRONMENT'] == 'PROD':
-        if upload_journal(CONFIG['PUBLISHED_JOURNALS_PATH'], merged_document):
+        if upload_journal(CONFIG['PUBLISHED_JOURNALS_PATH'], merged_document, CONFIG['HOST'], CONFIG['FTP_USERNAME'], CONFIG['FTP_PASSWORD']):
             logging.info(f'{merged_document} was uploaded successfully.')
         else:
             logging.critical(f'{merged_document} failed to upload.')
             raise Exception('The document failed to upload. Check logs for details.')
     elif CONFIG['ENVIRONMENT'] == 'TEST':
-        upload_journal_test(merged_document)
+        upload_journal_test(merged_document, CONFIG['FTP_DIR'], CONFIG['HOST'], CONFIG['FTP_USERNAME'], CONFIG['FTP_PASSWORD'], CONFIG['PUBLISHED_JOURNALS_PATH'])
             
 if __name__ == '__main__':
    main()
