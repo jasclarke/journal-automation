@@ -7,7 +7,7 @@ import os
 import shutil
 import subprocess
 import sys
-
+import time
 
 from dotenv import load_dotenv
 from ftplib import FTP
@@ -33,6 +33,33 @@ else:
     logging.critical('.env file was not found.')
     raise Exception('Configuration file is missing. Please see log for details.')
 
+def upload_journal_test(merged_document: str):
+    command = [
+        'python3', 
+        '-m', 'pyftpdlib',
+        '-w',
+        '-p', '21',
+        '-d', '/opt/homebrew/var/www/ipoweb/wp-content/uploads/download-manager-files',
+        '-u', CONFIG['FTP_USERNAME'],
+        '-P', CONFIG['FTP_PASSWORD']
+    ]
+
+    ftp_server = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    logging.info('Test FTP server started')
+    
+    try:
+        time.sleep(1)
+
+        if upload_journal(CONFIG['PUBLISHED_JOURNALS_PATH'], merged_document):
+            logging.info(f'{merged_document} was uploaded successfully.')
+        else:
+            logging.critical(f'{merged_document} failed to upload.')
+            raise Exception('The document failed to upload. Check logs for details.')
+    finally:
+        ftp_server.terminate()
+        ftp_server.wait()
+        logging.info('Test FTP server stopped.')
+
 def get_env(keys: list[str]) -> dict[str, str]:
     missing = [key for key in keys if key not in os.environ]
 
@@ -43,7 +70,7 @@ def get_env(keys: list[str]) -> dict[str, str]:
     return {key: os.environ[key] for key in keys}
 
 
-CONFIG = get_env(['HOST', 'WPDM_API_KEY', 'FTP_USERNAME', 'FTP_PASSWORD', 'JOURNAL_DOCS_PATH', 'PUBLISHED_JOURNALS_PATH'])
+CONFIG = get_env(['HOST', 'WPDM_API_KEY', 'FTP_USERNAME', 'FTP_PASSWORD', 'JOURNAL_DOCS_PATH', 'PUBLISHED_JOURNALS_PATH', 'ENVIRONMENT'])
 
 
 def upload_journal(path: str, file_name: str) -> bool:
@@ -170,12 +197,14 @@ def main() -> None:
     else:
         raise Exception('Document merge failed. Check logs for details')
 
-    if upload_journal(CONFIG['PUBLISHED_JOURNALS_PATH'], merged_document):
-        logging.info(f'{merged_document} was uploaded successfully.')
-    else:
-        logging.critical(f'{merged_document} failed to upload.')
-        raise Exception('The document failed to upload. Check logs for details.')
-    
+    if CONFIG['ENVIRONMENT'] == 'PROD':
+        if upload_journal(CONFIG['PUBLISHED_JOURNALS_PATH'], merged_document):
+            logging.info(f'{merged_document} was uploaded successfully.')
+        else:
+            logging.critical(f'{merged_document} failed to upload.')
+            raise Exception('The document failed to upload. Check logs for details.')
+    elif CONFIG['ENVIRONMENT'] == 'TEST':
+        upload_journal_test(merged_document)
             
 if __name__ == '__main__':
    main()
