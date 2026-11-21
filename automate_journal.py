@@ -46,16 +46,17 @@ def get_env(keys: list[str]) -> dict[str, str]:
 CONFIG = get_env(['HOST', 'WPDM_API_KEY', 'FTP_USERNAME', 'FTP_PASSWORD', 'JOURNAL_DOCS_PATH', 'PUBLISHED_JOURNALS_PATH'])
 
 
-def upload_journal(file_path: str) -> bool:
-    print(file_path)
+def upload_journal(path: str, file_name: str) -> bool:
+    file_path = path + '/' + file_name
+
     try:
         with FTP(CONFIG['HOST'], CONFIG['FTP_USERNAME'], CONFIG['FTP_PASSWORD']) as ftp:
             try:
                 with open(file_path, 'rb') as journal:
-                    ftp.storbinary(f'STOR {Path(file_path).stem}.pdf', journal)
+                    ftp.storbinary(f'STOR {file_name}', journal)
                     return True
             except FileNotFoundError:
-                logging.critical(f'{Path(file_path).stem}.pdf was not found.')
+                logging.critical(f'{file_name} was not found.')
                 return False
             except Exception as e:
                 logging.critical(f'Journal Upload Error: {e}')
@@ -169,6 +170,12 @@ def main() -> None:
     else:
         raise Exception('Document merge failed. Check logs for details')
 
+    if upload_journal(CONFIG['PUBLISHED_JOURNALS_PATH'], merged_document):
+        logging.info(f'{merged_document} was uploaded successfully.')
+    else:
+        logging.critical(f'{merged_document} failed to upload.')
+        raise Exception('The document failed to upload. Check logs for details.')
+    
             
 if __name__ == '__main__':
    main()
