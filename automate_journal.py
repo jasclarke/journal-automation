@@ -294,10 +294,15 @@ def main() -> None:
 
             if month_category:
                 if month_category['name'][5:] == datetime.datetime.now().strftime('%B'):
+                    # TODO: Add API function to create the package (journal)
                     pass
+                else:
+                    create_category(CONFIG['WPDM_API_KEY'], CONFIG['URL'], datetime.datetime.now().strftime('%B'), year_category['term_id'])
+                    # TODO: Add API function to create the package (journal)
     else:
-        pass
+        year_category = create_category(CONFIG['WPDM_API_KEY'], CONFIG['URL'], datetime.datetime.now().strftime('%Y'), 0)
+        month_category = create_category(CONFIG['WPDM_API_KEY'], CONFIG['URL'], datetime.datetime.now().strftime('%B'), year_category)
+        # TODO: Add API function to create the package (journal)
             
 if __name__ == '__main__':
-   #main()
-   create_category(CONFIG['WPDM_API_KEY'], CONFIG['URL'], '13 - Month', 0)
+   main()
