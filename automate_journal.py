@@ -2,8 +2,10 @@
 # This automates the process of retrieving, processing and uploading the journal.
 
 import datetime
+import json
 import logging
 import os
+import requests
 import shutil
 import subprocess
 import sys
@@ -70,7 +72,85 @@ def get_env(keys: list[str]) -> dict[str, str]:
     return {key: os.environ[key] for key in keys}
 
 
-CONFIG = get_env(['HOST', 'WPDM_API_KEY', 'FTP_USERNAME', 'FTP_PASSWORD', 'JOURNAL_DOCS_PATH', 'PUBLISHED_JOURNALS_PATH', 'ENVIRONMENT', 'FTP_DIR'])
+CONFIG = get_env([
+    'HOST', 
+    'WPDM_API_KEY', 
+    'FTP_USERNAME', 
+    'FTP_PASSWORD', 
+    'JOURNAL_DOCS_PATH', 
+    'PUBLISHED_JOURNALS_PATH',
+    'ENVIRONMENT',
+    'FTP_DIR',
+    'URL',
+    'PDF_ICON'
+])
+
+
+def publish_journal(api_key: str, url: str, title: str, slug: str, category: list, status: str, icon: str, files: dict):
+    pass
+
+
+def get_category(api_key: str, url: str, parent: int) -> dict | None:
+    params = {
+        'orderby': 'term_id',
+        'order': 'DESC',
+        'number': 1,
+        'parent': parent
+    }
+
+    headers = {
+        'Authorization': f'Bearer {api_key}',
+        'Content-type': 'application/json'
+    }
+
+    try:
+        response = requests.get(url + '/categories', params=params, headers=headers)
+        logging.debug(response.text)
+
+        response_json = response.json()[0]
+        logging.debug(f'category name: {response_json['name']}, category ID: {response_json['term_id']}')
+
+        return {'id': response_json['term_id'], 'name': response_json['name']}
+    
+    except requests.exceptions.JSONDecodeError as e:
+        logging.critical(f'JSON error: {e}')
+        raise Exception('JSON error! Please see the logs for details')
+    except requests.RequestException as e:
+        logging.critical(f'Unable to retrieve category: {e}')
+        raise Exception('Request Error! Please see the logs for details')
+    except Exception as e:
+        logging.critical(f'Unable to retrieve category: {e}')
+        raise Exception('An error occured! Please see the logs for details')
+
+
+def create_category(api_key: str, url: str, name: str, parent: int) -> int:
+    data = {
+        'name': name,
+        'parent': parent
+    }
+
+    headers = {
+        'Authorization': f'Bearer {api_key}',
+        'Content-type': 'application/json'
+    }
+
+    try:
+        response = requests.post(url + '/categories', json=data, headers=headers)
+        logging.debug(response.text)
+
+        response_json = response.json()
+        logging.debug(response_json)
+
+        return response_json['term_id']
+    except requests.exceptions.JSONDecodeError as e:
+        logging.critical(f'JSON error: {e}')
+        raise Exception('JSON error! Please see the logs for details')
+    except requests.RequestException as e:
+        logging.critical(f'Unable to retrieve category: {e}')
+        raise Exception('Request Error! Please see the logs for details')
+    except Exception as e:
+        logging.critical(f'Unable to retrieve category: {e}')
+        raise Exception('An error occured! Please see the logs for details')
 
 
 def upload_journal(path: str, file_name: str, host: str, username: str, password: str) -> bool:
@@ -205,6 +285,19 @@ def main() -> None:
             raise Exception('The document failed to upload. Check logs for details.')
     elif CONFIG['ENVIRONMENT'] == 'TEST':
         upload_journal_test(merged_document, CONFIG['FTP_DIR'], CONFIG['HOST'], CONFIG['FTP_USERNAME'], CONFIG['FTP_PASSWORD'], CONFIG['PUBLISHED_JOURNALS_PATH'])
+
+    year_category = get_category(CONFIG['WPDM_API_KEY'], CONFIG['URL'], 0)
+
+    if year_category:
+        if str(year_category['name']) == datetime.datetime.now().strftime('%Y'):
+            month_category = get_category(CONFIG['WPDM_API_KEY'], CONFIG['URL'], year_category['id'])
+
+            if month_category:
+                if month_category['name'][5:] == datetime.datetime.now().strftime('%B'):
+                    pass
+    else:
+        pass
             
 if __name__ == '__main__':
-   main()
+   #main()
+   create_category(CONFIG['WPDM_API_KEY'], CONFIG['URL'], '13 - Month', 0)
