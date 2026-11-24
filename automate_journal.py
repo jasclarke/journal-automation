@@ -93,8 +93,33 @@ session.headers.update({
 })
 
 
-def publish_journal(api_key: str, url: str, title: str, slug: str, category: list, status: str, icon: str, files: dict):
-    pass
+def publish_journal(url: str, title: str, category: list, status: str, icon: str, files: dict) -> str:
+    data = {
+        'title': title,
+        'status': status,
+        'icon': icon,
+        'category': category,
+        'files': files
+    }
+
+    try:
+        response = session.post(url + '/packages', json=data)
+
+        logging.debug(response.text)
+
+        response_json = response.json()
+        logging.debug(response_json)
+
+        return response_json['permalink']
+    except requests.exceptions.JSONDecodeError as e:
+        logging.critical(f'JSON error: {e}')
+        raise Exception('JSON error! Please see the logs for details')
+    except requests.RequestException as e:
+        logging.critical(f'Unable to retrieve category: {e}')
+        raise Exception('Request Error! Please see the logs for details')
+    except Exception as e:
+        logging.critical(f'Unable to retrieve category: {e}')
+        raise Exception('An error occured! Please see the logs for details')
 
 
 def get_category(url: str, parent: int) -> dict | None:
@@ -301,4 +326,5 @@ def main() -> None:
         # TODO: Add API function to create the package (journal)
             
 if __name__ == '__main__':
-   main()
+   #main()
+    print(publish_journal(CONFIG['URL'], 'test journal', [330], 'publish', CONFIG['PDF_ICON'], {'1': 'Published_21_11_26.pdf'}))
