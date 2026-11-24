@@ -86,11 +86,18 @@ CONFIG = get_env([
 ])
 
 
+session = requests.Session()
+session.headers.update({
+    'Authorization': f'Bearer {CONFIG["WPDM_API_KEY"]}',
+    'Content-type': 'application/json'
+})
+
+
 def publish_journal(api_key: str, url: str, title: str, slug: str, category: list, status: str, icon: str, files: dict):
     pass
 
 
-def get_category(api_key: str, url: str, parent: int) -> dict | None:
+def get_category(url: str, parent: int) -> dict | None:
     params = {
         'orderby': 'term_id',
         'order': 'DESC',
@@ -98,20 +105,15 @@ def get_category(api_key: str, url: str, parent: int) -> dict | None:
         'parent': parent
     }
 
-    headers = {
-        'Authorization': f'Bearer {api_key}',
-        'Content-type': 'application/json'
-    }
-
     try:
-        response = requests.get(url + '/categories', params=params, headers=headers)
+        response = session.get(url + '/categories', params=params)
         logging.debug(response.text)
 
         response_json = response.json()[0]
         logging.debug(f'category name: {response_json['name']}, category ID: {response_json['term_id']}')
 
         return {'id': response_json['term_id'], 'name': response_json['name']}
-    
+
     except requests.exceptions.JSONDecodeError as e:
         logging.critical(f'JSON error: {e}')
         raise Exception('JSON error! Please see the logs for details')
@@ -122,20 +124,14 @@ def get_category(api_key: str, url: str, parent: int) -> dict | None:
         logging.critical(f'Unable to retrieve category: {e}')
         raise Exception('An error occured! Please see the logs for details')
 
-
-def create_category(api_key: str, url: str, name: str, parent: int) -> int:
+def create_category(url: str, name: str, parent: int) -> int:
     data = {
         'name': name,
         'parent': parent
     }
 
-    headers = {
-        'Authorization': f'Bearer {api_key}',
-        'Content-type': 'application/json'
-    }
-
     try:
-        response = requests.post(url + '/categories', json=data, headers=headers)
+        response = session.post(url + '/categories', json=data)
         logging.debug(response.text)
 
         response_json = response.json()
@@ -286,22 +282,22 @@ def main() -> None:
     elif CONFIG['ENVIRONMENT'] == 'TEST':
         upload_journal_test(merged_document, CONFIG['FTP_DIR'], CONFIG['HOST'], CONFIG['FTP_USERNAME'], CONFIG['FTP_PASSWORD'], CONFIG['PUBLISHED_JOURNALS_PATH'])
 
-    year_category = get_category(CONFIG['WPDM_API_KEY'], CONFIG['URL'], 0)
+    year_category = get_category(CONFIG['URL'], 0)
 
     if year_category:
         if str(year_category['name']) == datetime.datetime.now().strftime('%Y'):
-            month_category = get_category(CONFIG['WPDM_API_KEY'], CONFIG['URL'], year_category['id'])
+            month_category = get_category(CONFIG['URL'], year_category['id'])
 
             if month_category:
                 if month_category['name'][5:] == datetime.datetime.now().strftime('%B'):
                     # TODO: Add API function to create the package (journal)
                     pass
                 else:
-                    create_category(CONFIG['WPDM_API_KEY'], CONFIG['URL'], datetime.datetime.now().strftime('%B'), year_category['term_id'])
+                    create_category(CONFIG['URL'], datetime.datetime.now().strftime('%B'), year_category['term_id'])
                     # TODO: Add API function to create the package (journal)
     else:
-        year_category = create_category(CONFIG['WPDM_API_KEY'], CONFIG['URL'], datetime.datetime.now().strftime('%Y'), 0)
-        month_category = create_category(CONFIG['WPDM_API_KEY'], CONFIG['URL'], datetime.datetime.now().strftime('%B'), year_category)
+        year_category = create_category(CONFIG['URL'], datetime.datetime.now().strftime('%Y'), 0)
+        month_category = create_category(CONFIG['URL'], datetime.datetime.now().strftime('%B'), year_category)
         # TODO: Add API function to create the package (journal)
             
 if __name__ == '__main__':
