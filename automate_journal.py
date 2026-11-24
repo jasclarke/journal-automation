@@ -310,6 +310,8 @@ def main() -> None:
         upload_journal_test(merged_document, CONFIG['FTP_DIR'], CONFIG['HOST'], CONFIG['FTP_USERNAME'], CONFIG['FTP_PASSWORD'], CONFIG['PUBLISHED_JOURNALS_PATH'])
 
     year_category = get_category(CONFIG['URL'], 0)
+    journal_date = datetime.datetime.now().strftime('%d-%m-%y')
+    journal_title = 'Journal Published' + journal_date
 
     if year_category:
         if str(year_category['name']) == datetime.datetime.now().strftime('%Y'):
@@ -317,15 +319,17 @@ def main() -> None:
 
             if month_category:
                 if month_category['name'][5:] == datetime.datetime.now().strftime('%B'):
-                    # TODO: Add API function to create the package (journal)
-                    pass
+                    journal_url = publish_journal(CONFIG['URL'], journal_title, [month_category['term_id']], 'publish', CONFIG['PDF_ICON'], {'1': merged_document}, 13, ['guest'])
+                    logging.info(f'The journal was published at {journal_url}.')
                 else:
-                    create_category(CONFIG['URL'], datetime.datetime.now().strftime('%B'), year_category['term_id'])
-                    # TODO: Add API function to create the package (journal)
+                    month_category = create_category(CONFIG['URL'], datetime.datetime.now().strftime('%B'), year_category['term_id'])
+                    journal_url = publish_journal(CONFIG['URL'], journal_title, [month_category], 'publish', CONFIG['PDF_ICON'], {'1': merged_document}, 13, ['guest'])
+                    logging.info(f'The journal was published at {journal_url}.')
     else:
         year_category = create_category(CONFIG['URL'], datetime.datetime.now().strftime('%Y'), 0)
         month_category = create_category(CONFIG['URL'], datetime.datetime.now().strftime('%B'), year_category)
-        # TODO: Add API function to create the package (journal)
+        journal_url = publish_journal(CONFIG['URL'], journal_title, [month_category], 'publish', CONFIG['PDF_ICON'], {'1': merged_document}, 13, ['guest'])
+        logging.info(f'The journal was published at {journal_url}.')
             
 if __name__ == '__main__':
    #main()
