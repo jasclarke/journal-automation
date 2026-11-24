@@ -93,13 +93,15 @@ session.headers.update({
 })
 
 
-def publish_journal(url: str, title: str, category: list, status: str, icon: str, files: dict) -> str:
+def publish_journal(url: str, title: str, category: list, status: str, icon: str, files: dict[str, str], author: int, access: list) -> str:
     data = {
         'title': title,
         'status': status,
         'icon': icon,
-        'category': category,
-        'files': files
+        'categories': category,
+        'files': files,
+        'author': author,
+        'access': access
     }
 
     try:
@@ -327,4 +329,4 @@ def main() -> None:
             
 if __name__ == '__main__':
    #main()
-    print(publish_journal(CONFIG['URL'], 'test journal', [330], 'publish', CONFIG['PDF_ICON'], {'1': 'Published_21_11_26.pdf'}))
+    print(publish_journal(CONFIG['URL'], 'test journal', [330], 'publish', CONFIG['PDF_ICON'], {'1': 'Published_18_11_26.pdf'}, 13, ['guest']))
