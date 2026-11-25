@@ -311,7 +311,7 @@ def main() -> None:
 
     year_category = get_category(CONFIG['URL'], 0)
     journal_date = datetime.datetime.now().strftime('%d-%m-%y')
-    journal_title = 'Journal Published' + journal_date
+    journal_title = 'Journal Published ' + journal_date
 
     if year_category:
         if str(year_category['name']) == datetime.datetime.now().strftime('%Y'):
@@ -319,7 +319,7 @@ def main() -> None:
 
             if month_category:
                 if month_category['name'][5:] == datetime.datetime.now().strftime('%B'):
-                    journal_url = publish_journal(CONFIG['URL'], journal_title, [month_category['term_id']], 'publish', CONFIG['PDF_ICON'], {'1': merged_document}, 13, ['guest'])
+                    journal_url = publish_journal(CONFIG['URL'], journal_title, [month_category['id']], 'publish', CONFIG['PDF_ICON'], {'1': merged_document}, 13, ['guest'])
                     logging.info(f'The journal was published at {journal_url}.')
                 else:
                     month_category = create_category(CONFIG['URL'], datetime.datetime.now().strftime('%B'), year_category['term_id'])
@@ -332,5 +332,5 @@ def main() -> None:
         logging.info(f'The journal was published at {journal_url}.')
             
 if __name__ == '__main__':
-   #main()
-    print(publish_journal(CONFIG['URL'], 'test journal', [330], 'publish', CONFIG['PDF_ICON'], {'1': 'Published_18_11_26.pdf'}, 13, ['guest']))
+   main()
+    #print(publish_journal(CONFIG['URL'], 'test journal', [330], 'publish', CONFIG['PDF_ICON'], {'1': 'Published_18_11_26.pdf'}, 13, ['guest']))
