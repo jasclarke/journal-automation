@@ -2,7 +2,6 @@
 # This automates the process of retrieving, processing and uploading the journal.
 
 import datetime
-import json
 import logging
 import os
 import requests
@@ -16,15 +15,17 @@ from ftplib import FTP
 from pathlib import Path
 from pypdf import PdfWriter
 
-Path('logs').mkdir(exist_ok=True)
+BASE_DIR = Path(__file__).resolve().parent
+LOG_DIR = BASE_DIR / 'logs'
+LOG_DIR.mkdir(exist_ok=True)
 
 logging.basicConfig(
-    filename=f'./logs/{datetime.datetime.now().strftime('%d_%m_%y_%H_%M_%S')}.txt',
+    filename=LOG_DIR / f'{datetime.datetime.now().strftime('%d_%m_%y_%H_%M_%S')}.txt',
     level=logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
-if Path(os.getcwd() + '/.env').is_file():
+if Path(BASE_DIR / '.env').is_file():
     if load_dotenv():
         logging.debug('.env file has values')
     else:
@@ -106,8 +107,8 @@ def publish_journal(url: str, title: str, category: list, status: str, icon: str
 
     try:
         response = session.post(url + '/packages', json=data)
-
         logging.debug(response.text)
+        response.raise_for_status()
 
         response_json = response.json()
         logging.debug(response_json)
@@ -117,7 +118,7 @@ def publish_journal(url: str, title: str, category: list, status: str, icon: str
         logging.critical(f'JSON error: {e}')
         raise Exception('JSON error! Please see the logs for details')
     except requests.RequestException as e:
-        logging.critical(f'Unable to retrieve category: {e}')
+        logging.critical(f'Unable to publish journal: {e}')
         raise Exception('Request Error! Please see the logs for details')
     except Exception as e:
         logging.critical(f'Unable to retrieve category: {e}')
@@ -135,6 +136,7 @@ def get_category(url: str, parent: int) -> dict | None:
     try:
         response = session.get(url + '/categories', params=params)
         logging.debug(response.text)
+        response.raise_for_status()
 
         response_json = response.json()[0]
         logging.debug(f'category name: {response_json['name']}, category ID: {response_json['term_id']}')
@@ -160,6 +162,7 @@ def create_category(url: str, name: str, parent: int) -> int:
     try:
         response = session.post(url + '/categories', json=data)
         logging.debug(response.text)
+        response.raise_for_status()
 
         response_json = response.json()
         logging.debug(response_json)
@@ -322,12 +325,26 @@ def main() -> None:
                     journal_url = publish_journal(CONFIG['URL'], journal_title, [month_category['id']], 'publish', CONFIG['PDF_ICON'], {'1': merged_document}, 13, ['guest'])
                     logging.info(f'The journal was published at {journal_url}.')
                 else:
-                    month_category = create_category(CONFIG['URL'], datetime.datetime.now().strftime('%B'), year_category['term_id'])
+                    logging.warning('The current month was not the last created category for this year.')
+                    month_category = create_category(CONFIG['URL'], datetime.datetime.now().strftime('%m - %B'), year_category['id'])
                     journal_url = publish_journal(CONFIG['URL'], journal_title, [month_category], 'publish', CONFIG['PDF_ICON'], {'1': merged_document}, 13, ['guest'])
                     logging.info(f'The journal was published at {journal_url}.')
+            else:
+                logging.warning('No categories were found for the current year.')
+                year_category = create_category(CONFIG['URL'], datetime.datetime.now().strftime('%Y'), 0)
+                month_category = create_category(CONFIG['URL'], datetime.datetime.now().strftime('%m - %B'), year_category)
+                journal_url = publish_journal(CONFIG['URL'], journal_title, [month_category], 'publish', CONFIG['PDF_ICON'], {'1': merged_document}, 13, ['guest'])
+                logging.info(f'The journal was published at {journal_url}.')
+        else:
+            logging.warning('The current year was not the last created category.')
+            year_category = create_category(CONFIG['URL'], datetime.datetime.now().strftime('%Y'), 0)
+            month_category = create_category(CONFIG['URL'], datetime.datetime.now().strftime('%m - %B'), year_category)
+            journal_url = publish_journal(CONFIG['URL'], journal_title, [month_category], 'publish', CONFIG['PDF_ICON'], {'1': merged_document}, 13, ['guest'])
+            logging.info(f'The journal was published at {journal_url}.')
     else:
+        logging.warning('No categories were found.')
         year_category = create_category(CONFIG['URL'], datetime.datetime.now().strftime('%Y'), 0)
-        month_category = create_category(CONFIG['URL'], datetime.datetime.now().strftime('%B'), year_category)
+        month_category = create_category(CONFIG['URL'], datetime.datetime.now().strftime('%m - %B'), year_category)
         journal_url = publish_journal(CONFIG['URL'], journal_title, [month_category], 'publish', CONFIG['PDF_ICON'], {'1': merged_document}, 13, ['guest'])
         logging.info(f'The journal was published at {journal_url}.')
             
