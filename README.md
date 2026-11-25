@@ -7,14 +7,18 @@ Journal Publication Automation
 This project automates the process of downloading the attachments from specific emails, converting them to PDF format if they are in word format, Combining them into one document, naming the document in a specified format, saving it to a specificed folder, and uploading it into WordPress Download Manager (WPDM) plugin with a scheduled date for publication.
 
 ## Roadmap
--[x] Document processor
--[x] WordPress Communicator
--[ ] Email Downloader
+- [x] Document processor
+- [x] WordPress Communicator
+- [ ] Email Downloader
 
 ## Setup
 - **Libre Office must be installed** It is used to convert the word documents to PDFs.
 - [Python](https://www.python.org/downloads/) 3.14.x or later should be installed.
-- Python packages required: [pypdf](https://pypdf.readthedocs.io/en/stable/user/installation.html)
+- Python packages required: 
+    - [pypdf](https://pypdf.readthedocs.io/en/stable/user/installation.html)
+    - [requests](https://pypi.org/project/requests/)
+    - [pyftpdlib](https://pypi.org/project/pyftpdlib/) for testing
+    - [python-dotenv](https://pypi.org/project/python-dotenv/)
 - It is optional to create a logs folder in the same directory as the script but the script will create one if it does not exist.
 - An env file is required with the following keys:
     - HOST = FTP host (WPDM folder for uploaded files)
