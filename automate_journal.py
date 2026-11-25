@@ -11,7 +11,7 @@ import sys
 import time
 
 from dotenv import load_dotenv
-from ftplib import FTP
+from ftplib import FTP_TLS
 from pathlib import Path
 from pypdf import PdfWriter
 
@@ -36,10 +36,15 @@ else:
     logging.critical('.env file was not found.')
     raise Exception('Configuration file is missing. Please see log for details.')
 
-def upload_journal_test(merged_document: str, ftp_dir:str, host: str, username: str, password: str, path: str) -> None:
+def upload_journal_test(merged_document: str, ftp_dir:str, key_file: str, cert_file: str, host: str, username: str, password: str, path: str) -> None:
     command = [
         'python3', 
         '-m', 'pyftpdlib',
+        '--tls',
+        '--keyfile', key_file,
+        '--certfile', cert_file,
+        '--tls-control-required',
+        '--tls-data-required',
         '-w',
         '-p', '21',
         '-d', ftp_dir,
@@ -83,7 +88,9 @@ CONFIG = get_env([
     'ENVIRONMENT',
     'FTP_DIR',
     'URL',
-    'PDF_ICON'
+    'PDF_ICON',
+    'KEY_FILE',
+    'CERT_FILE'
 ])
 
 
@@ -185,10 +192,12 @@ def upload_journal(path: str, file_name: str, host: str, username: str, password
     file_path = path + '/' + file_name
 
     try:
-        with FTP(host, username, password) as ftp:
+        with FTP_TLS(host, username, password) as ftps:
+            ftps.prot_p()
+
             try:
                 with open(file_path, 'rb') as journal:
-                    ftp.storbinary(f'STOR {file_name}', journal)
+                    ftps.storbinary(f'STOR {file_name}', journal)
                     return True
             except FileNotFoundError:
                 logging.critical(f'{file_name} was not found.')
@@ -312,7 +321,7 @@ def main() -> None:
             logging.critical(f'{merged_document} failed to upload.')
             raise Exception('The document failed to upload. Check logs for details.')
     elif CONFIG['ENVIRONMENT'] == 'TEST':
-        upload_journal_test(merged_document, CONFIG['FTP_DIR'], CONFIG['HOST'], CONFIG['FTP_USERNAME'], CONFIG['FTP_PASSWORD'], CONFIG['PUBLISHED_JOURNALS_PATH'])
+        upload_journal_test(merged_document, CONFIG['FTP_DIR'], CONFIG['KEY_FILE'], CONFIG['CERT_FILE'], CONFIG['HOST'], CONFIG['FTP_USERNAME'], CONFIG['FTP_PASSWORD'], CONFIG['PUBLISHED_JOURNALS_PATH'])
 
     now = datetime.datetime.now()
     year_category = get_category(CONFIG['URL'], 0, str(now.year)) or create_category(CONFIG['URL'], datetime.datetime.now().strftime('%Y'), 0)
