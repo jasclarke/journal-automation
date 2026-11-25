@@ -125,11 +125,10 @@ def publish_journal(url: str, title: str, category: list, status: str, icon: str
         raise Exception('An error occured! Please see the logs for details')
 
 
-def get_category(url: str, parent: int) -> dict | None:
+def get_category(url: str, parent: int, name: str) -> int | None:
     params = {
         'orderby': 'term_id',
         'order': 'DESC',
-        'number': 1,
         'parent': parent
     }
 
@@ -138,11 +137,14 @@ def get_category(url: str, parent: int) -> dict | None:
         logging.debug(response.text)
         response.raise_for_status()
 
-        response_json = response.json()[0]
-        logging.debug(f'category name: {response_json['name']}, category ID: {response_json['term_id']}')
+        categories = response.json()
+        logging.debug(f'Categories found: {categories}')
 
-        return {'id': response_json['term_id'], 'name': response_json['name']}
-
+        for category in categories:
+            if category['name'] == name:
+                return category['term_id']
+            
+        return None
     except requests.exceptions.JSONDecodeError as e:
         logging.critical(f'JSON error: {e}')
         raise Exception('JSON error! Please see the logs for details')
@@ -312,42 +314,12 @@ def main() -> None:
     elif CONFIG['ENVIRONMENT'] == 'TEST':
         upload_journal_test(merged_document, CONFIG['FTP_DIR'], CONFIG['HOST'], CONFIG['FTP_USERNAME'], CONFIG['FTP_PASSWORD'], CONFIG['PUBLISHED_JOURNALS_PATH'])
 
-    year_category = get_category(CONFIG['URL'], 0)
-    journal_date = datetime.datetime.now().strftime('%d-%m-%y')
-    journal_title = 'Journal Published ' + journal_date
-
-    if year_category:
-        if str(year_category['name']) == datetime.datetime.now().strftime('%Y'):
-            month_category = get_category(CONFIG['URL'], year_category['id'])
-
-            if month_category:
-                if month_category['name'][5:] == datetime.datetime.now().strftime('%B'):
-                    journal_url = publish_journal(CONFIG['URL'], journal_title, [month_category['id']], 'publish', CONFIG['PDF_ICON'], {'1': merged_document}, 13, ['guest'])
-                    logging.info(f'The journal was published at {journal_url}.')
-                else:
-                    logging.warning('The current month was not the last created category for this year.')
-                    month_category = create_category(CONFIG['URL'], datetime.datetime.now().strftime('%m - %B'), year_category['id'])
-                    journal_url = publish_journal(CONFIG['URL'], journal_title, [month_category], 'publish', CONFIG['PDF_ICON'], {'1': merged_document}, 13, ['guest'])
-                    logging.info(f'The journal was published at {journal_url}.')
-            else:
-                logging.warning('No categories were found for the current year.')
-                year_category = create_category(CONFIG['URL'], datetime.datetime.now().strftime('%Y'), 0)
-                month_category = create_category(CONFIG['URL'], datetime.datetime.now().strftime('%m - %B'), year_category)
-                journal_url = publish_journal(CONFIG['URL'], journal_title, [month_category], 'publish', CONFIG['PDF_ICON'], {'1': merged_document}, 13, ['guest'])
-                logging.info(f'The journal was published at {journal_url}.')
-        else:
-            logging.warning('The current year was not the last created category.')
-            year_category = create_category(CONFIG['URL'], datetime.datetime.now().strftime('%Y'), 0)
-            month_category = create_category(CONFIG['URL'], datetime.datetime.now().strftime('%m - %B'), year_category)
-            journal_url = publish_journal(CONFIG['URL'], journal_title, [month_category], 'publish', CONFIG['PDF_ICON'], {'1': merged_document}, 13, ['guest'])
-            logging.info(f'The journal was published at {journal_url}.')
-    else:
-        logging.warning('No categories were found.')
-        year_category = create_category(CONFIG['URL'], datetime.datetime.now().strftime('%Y'), 0)
-        month_category = create_category(CONFIG['URL'], datetime.datetime.now().strftime('%m - %B'), year_category)
-        journal_url = publish_journal(CONFIG['URL'], journal_title, [month_category], 'publish', CONFIG['PDF_ICON'], {'1': merged_document}, 13, ['guest'])
-        logging.info(f'The journal was published at {journal_url}.')
+    now = datetime.datetime.now()
+    year_category = get_category(CONFIG['URL'], 0, str(now.year)) or create_category(CONFIG['URL'], datetime.datetime.now().strftime('%Y'), 0)
+    month_category = get_category(CONFIG['URL'], year_category, str(now.strftime('%m - %B'))) or create_category(CONFIG['URL'], datetime.datetime.now().strftime('%m - %B'), year_category)
+    journal_title = 'Journal Published ' + now.strftime('%d-%m-%y')
+    journal_url = publish_journal(CONFIG['URL'], journal_title, [month_category], 'publish', CONFIG['PDF_ICON'], {'1': merged_document}, 13, ['guest'])
+    logging.info(f'The journal was published at {journal_url}.')
             
 if __name__ == '__main__':
    main()
-    #print(publish_journal(CONFIG['URL'], 'test journal', [330], 'publish', CONFIG['PDF_ICON'], {'1': 'Published_18_11_26.pdf'}, 13, ['guest']))
