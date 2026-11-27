@@ -1,6 +1,7 @@
 # Journal publication automation: automate_journal.py
 # This automates the process of retrieving, processing and uploading the journal.
 
+import ezgmail
 import datetime
 import logging
 import os
@@ -99,6 +100,9 @@ session.headers.update({
     'Authorization': f'Bearer {CONFIG["WPDM_API_KEY"]}',
     'Content-type': 'application/json'
 })
+
+def download_journal_files():
+    pass
 
 
 def publish_journal(url: str, title: str, category: list, status: str, icon: str, files: dict[str, str], author: int, access: list) -> str:

@@ -4,3 +4,5 @@
 .env
 *.crt
 *.key
+credentials.json
+token.json
